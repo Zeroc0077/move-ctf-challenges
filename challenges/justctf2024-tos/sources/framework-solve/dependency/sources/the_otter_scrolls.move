@@ -6,7 +6,6 @@ module challenge::theotterscrolls {
 
     use sui::table::{Self, Table};
     use std::string::{Self, String};
-    use std::debug;
 
     // ---------------------------------------------------
     // STRUCTS
