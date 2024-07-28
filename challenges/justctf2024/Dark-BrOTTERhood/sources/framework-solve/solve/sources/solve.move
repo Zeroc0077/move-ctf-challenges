@@ -22,9 +22,7 @@ module solve::solve {
             challenge::Otter::get_the_reward(_vault, _questboard, _player, 0, _ctx);
             i = i+1;
         };
-
         let flag = challenge::Otter::buy_flag(_vault, _player, _ctx);
         challenge::Otter::prove(_questboard, flag);
     }
-
 }

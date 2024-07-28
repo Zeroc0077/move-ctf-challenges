@@ -1,0 +1,26 @@
+services:
+  server:
+    build: server
+    environment:
+      - "PORT=9000"
+      - "SHARED_SECRET=different_secret_on_remote"
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - shared-bridge
+  runner:
+    build: runner
+    environment:
+      - "SHARED_SECRET=different_secret_on_remote"
+      - "FLAG=AptosCTF{PLACEHOLDER}"
+      - "PUBLIC_IP=127.0.0.1"
+    ports:
+     - "7070:7070"
+    networks:
+      - shared-bridge
+
+networks:
+  shared-bridge:
+    driver: bridge
