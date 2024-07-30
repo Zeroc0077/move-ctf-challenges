@@ -54,14 +54,12 @@ module challenge::router {
                 wrapper: signer::address_of(object_wrapper_signer)
             });
         set_hp(sender_object_signer, bowser, 254);
-
     }
 
     public fun set_hp(account: &signer, bowser_obj: Object<Bowser>, hp: u8) acquires Bowser {
         assert!(object::owner(bowser_obj) == signer::address_of(account), 1);
         let bowser = borrow_global_mut<Bowser>(object::object_address(&bowser_obj));
         bowser.hp = hp
-
     }
 
     public fun start_game(account: &signer): address {
@@ -73,7 +71,6 @@ module challenge::router {
 
         move_to(sender_object_signer, Mario { hp: 0 });
         object::address_from_constructor_ref(constructor_ref)
-
     }
 
     public fun train_mario(account: &signer, mario_obj: Object<Mario>) acquires Mario {
