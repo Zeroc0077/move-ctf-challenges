@@ -36,6 +36,37 @@ module solution::exploit {
 
 ![](./images/1.png)
 
+## Can You Revela Me
+
+This challenge is a Reverse challenge, you need to decompile the given bytecode and figure out the original source code of the challenge contract. You can use `aptos move decompile` command to decompile the bytecode.(You need to download revela at first)
+
+So we can get the [decomplied source code of the challenge contract](./can-you-revela-me/source.mv.move). To get the flag, we can use unit test to print the flag, just change the `get_flag` function as follows:
+
+```move
+use std::debug;
+#[test]
+public fun get_flag() : vector<u8> {
+let v0 = a0();
+    0x1::vector::append<u8>(&mut v0, a1());
+    0x1::vector::append<u8>(&mut v0, a2());
+    0x1::vector::append<u8>(&mut v0, a3());
+    0x1::vector::append<u8>(&mut v0, a4());
+    0x1::vector::append<u8>(&mut v0, a5());
+    0x1::vector::append<u8>(&mut v0, a6());
+    0x1::vector::append<u8>(&mut v0, a7());
+    0x1::vector::append<u8>(&mut v0, a8());
+    0x1::vector::append<u8>(&mut v0, a9());
+    0x1::vector::append<u8>(&mut v0, a10());
+    0x1::vector::append<u8>(&mut v0, b"}");
+    debug::print<vector<u8>>(&v0);
+    v0
+}
+```
+
+And run `aptos move test` to get the flag.
+
+![](./images/10.png)
+
 ## Flash Loan
 
 As the name of the challenge suggests, this challenge requires exploiting a vulnerability in the flash loan contract to solve it. So we first need to understand  all the functions in the challenge contract, especially the functions we can call directly.
@@ -241,10 +272,7 @@ invoke_function(b"0x000000000000000000000000000000000000000000000000000000000000
 
 ## sage
 
-It's a math problem, we can use the `solve_mod` function in sagemath to solve this problem, the solution is as follows:
-
-```python
-```
+It's a math problem, we can use the `solve_mod` function in sagemath to solve this problem, but it needs some bruteforce to get the correct answer. Because the equations are all in groups of three numbers, it is best to verify and blast them in groups.
 
 The solution contract is as follows:
 
